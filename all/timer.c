@@ -9,19 +9,21 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/export.h>
+#include <linux/spinlock.h>
 
 #include <linux/cdev.h>
 
-#include "/home/gerold103/Sciwork/ts_subsys.git/headers/ts_ops.h"
+#include "ts_ops.h"
 
 MODULE_LICENSE("Dual BSD/GPL");
 
-#define TIMER_INTERVAL_SECS 1
+#define TIMER_INTERVAL_SECS 2
 
 //------------------------D E F I N I T I O N S------------------------
 
 //Struct, describing this device
 struct sdtimer_dev {
+	spinlock_t spn_lock;
 	size_t value;
 
 	size_t vbuf_size;
@@ -54,7 +56,7 @@ struct file_operations sdt_fops = {
 
 dev_t devno;
 
-uint get_current_time(void);
+struct timespec get_current_time(void);
 
 struct ts_dev tsdev = {
 	.module_name = THIS_MODULE->name,
@@ -71,7 +73,9 @@ enum hrtimer_restart timer_callback(struct hrtimer *timer_for_restart) {
 	interval = ktime_set(TIMER_INTERVAL_SECS, 0);
 	hrtimer_forward(timer_for_restart, cur_time, interval);
 	
+	spin_lock(&(sdt_dev.spn_lock));
 	sdt_dev.value++;
+	spin_unlock(&(sdt_dev.spn_lock));
 	
 	return HRTIMER_RESTART;
 }
@@ -134,7 +138,13 @@ long sdtimer_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
 
 ssize_t sdtimer_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
 	struct sdtimer_dev *dev;
-	int cur_time = get_systime_from_devtime(&tsdev, sdt_dev.value);
+	struct timespec old_value;
+	int cur_time = 0;
+	old_value = current_kernel_time();
+	spin_lock(&(sdt_dev.spn_lock));
+	old_value.tv_sec = sdt_dev.value;
+	spin_unlock(&(sdt_dev.spn_lock));
+	cur_time = get_systime_from_devtime(&tsdev, old_value).tv_sec;
 
 	dev = filp->private_data;
 	
@@ -151,9 +161,14 @@ ssize_t sdtimer_read(struct file *filp, char __user *buf, size_t count, loff_t *
 	return 0;
 }
 
-uint get_current_time(void)
+struct timespec get_current_time(void)
 {
-	return (uint)(sdt_dev.value);
+	struct timespec old_value;
+	old_value = current_kernel_time();
+	spin_lock(&(sdt_dev.spn_lock));
+	old_value.tv_sec = sdt_dev.value;
+	spin_unlock(&(sdt_dev.spn_lock));
+	return old_value;
 }
 
 //------------------------M O D U L E   I N I T------------------------
@@ -173,6 +188,7 @@ static int __init timer_init(void) {
 	
 	sdt_dev.cdev.owner = THIS_MODULE;
 	sdt_dev.cdev.ops = &sdt_fops;
+	spin_lock_init(&(sdt_dev.spn_lock));
 	
 	//init hr_timer
 	sdt_dev.value = 0;

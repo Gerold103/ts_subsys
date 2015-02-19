@@ -4,6 +4,7 @@
 #include <linux/string.h>
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
+#include <linux/time.h>
 #include <linux/mutex.h>
 
 #include <linux/kdev_t.h>
@@ -13,7 +14,7 @@
 
 #include <linux/cdev.h>
 
-#include "/home/gerold103/Sciwork/ts_subsys.git/headers/ts_ops.h"
+#include "ts_ops.h"
 
 MODULE_LICENSE("Dual BSD/GPL");
 
@@ -25,17 +26,19 @@ enum hrtimer_restart timer_callback(struct hrtimer *timer_for_restart);
 
 //------------------------R E A L I Z A T I O N S------------------------
 
-uint get_systime_from_devtime(struct ts_dev *dev, uint dev_time)
+struct timespec get_systime_from_devtime(struct ts_dev *dev, struct timespec dev_time)
 {
 	/*
 	???????
 	sys_time: 0  1  2  3  4  5 ...
-	dev1:     0  x 2x 3x 4x 5x ...
+	dev1:     x 2x 3x 4x 5x 6x ...
 	dev2:           0  y 2y 3y  
 	Then in 1 real second in dev passes x seconds. And when in dev time is X then real time is X / x ?
 	*/
-	uint x = dev->ts1 - dev->ts2;
-	return dev_time / x;
+	/*uint x = dev->ts1 - dev->ts2;
+	if (x) return dev_time / x;
+	else return dev->ts1;*/
+	return current_kernel_time();
 }
 
 bool ts_register(struct ts_dev *dev)

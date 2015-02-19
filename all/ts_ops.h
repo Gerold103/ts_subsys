@@ -4,14 +4,14 @@ typedef unsigned int uint;
 //They was read in interval TIMER_INTERVAL_SECS in terms of this module. Registered module must implement function getcurtime.
 struct ts_dev {
 	const char *module_name;
-	uint (*getcurtime)(void);
+	struct timespec (*getcurtime)(void);
 	struct hrtimer hr_timer;
-	uint ts1;
-	uint ts2;
+	struct timespec ts1;
+	struct timespec ts2;
 };
 
 //This function registered devs will call for reduce their time to real time
-extern uint get_systime_from_devtime(struct ts_dev *dev, uint dev_time);
+extern struct timespec get_systime_from_devtime(struct ts_dev *dev, struct timespec dev_time);
 
 //This function each dev must call for register self in subsystem
 extern bool ts_register(struct ts_dev *dev);
