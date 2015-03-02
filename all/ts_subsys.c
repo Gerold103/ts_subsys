@@ -19,6 +19,7 @@
 MODULE_LICENSE("Dual BSD/GPL");
 
 #define TIMER_INTERVAL_SECS 1
+#define FREQUENCY_VAL 1.5
 
 //------------------------D E F I N I T I O N S------------------------
 
@@ -35,15 +36,17 @@ struct timespec get_systime_from_devtime(struct ts_dev *dev, struct timespec dev
 	dev2:           0  y 2y 3y  
 	Then in 1 real second in dev passes x seconds. And when in dev time is X then real time is X / x ?
 	*/
-	/*uint x = dev->ts1 - dev->ts2;
+	uint x = dev->ts1 - dev->ts2;
 	if (x) return dev_time / x;
-	else return dev->ts1;*/
-	return current_kernel_time();
+	else return current_kernel_time();
+	//return current_kernel_time();
 }
 
 bool ts_register(struct ts_dev *dev)
 {
-	ktime_t interval = ktime_set(TIMER_INTERVAL_SECS, 0);
+	//ktime_t interval = ktime_set(TIMER_INTERVAL_SECS, 0);
+	ktime_t interval = timespec_to_ktime(dev->hint.frequency);
+	interval = ktime_set(0, ktime_to_ns(interval) * FREQUENCY_VAL);
 	dev->ts1 = (*(dev->getcurtime))();
 	hrtimer_init(&(dev->hr_timer), CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	dev->hr_timer.function = &timer_callback;

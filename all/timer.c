@@ -204,6 +204,8 @@ static int __init timer_init(void) {
 
 	//Here we register our device in ts_subsys
 
+	set_normalized_timespec(&(tsdev.hint.frequency), TIMER_INTERVAL_SECS, 0);
+
 	ts_register(&tsdev);
 	
 	printk(KERN_ALERT "Module init done\n");
