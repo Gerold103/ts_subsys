@@ -139,12 +139,12 @@ long sdtimer_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
 ssize_t sdtimer_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
 	struct sdtimer_dev *dev;
 	struct timespec old_value;
-	int cur_time = 0;
-	old_value = current_kernel_time();
+	struct timespec cur_time;
+	old_value.tv_nsec = 0;
 	spin_lock(&(sdt_dev.spn_lock));
 	old_value.tv_sec = sdt_dev.value;
 	spin_unlock(&(sdt_dev.spn_lock));
-	cur_time = get_systime_from_devtime(&tsdev, old_value).tv_sec;
+	cur_time = get_systime_from_devtime(&tsdev, old_value);
 
 	dev = filp->private_data;
 	
@@ -157,14 +157,14 @@ ssize_t sdtimer_read(struct file *filp, char __user *buf, size_t count, loff_t *
 		return i;
 	}
 
-	printk(KERN_INFO "Current sys time: %d\n", cur_time);
+	printk(KERN_INFO "Current sys time: sec = %d, nsec = %d\n", cur_time.tv_sec, cur_time.tv_nsec);
 	return 0;
 }
 
 struct timespec get_current_time(void)
 {
 	struct timespec old_value;
-	old_value = current_kernel_time();
+	old_value.tv_nsec = 0;
 	spin_lock(&(sdt_dev.spn_lock));
 	old_value.tv_sec = sdt_dev.value;
 	spin_unlock(&(sdt_dev.spn_lock));
@@ -204,7 +204,7 @@ static int __init timer_init(void) {
 
 	//Here we register our device in ts_subsys
 
-	set_normalized_timespec(&(tsdev.hint.frequency), TIMER_INTERVAL_SECS, 0);
+	tsdev.hint.ns_interval = ktime_to_ns(interval);
 
 	ts_register(&tsdev);
 	

@@ -3,7 +3,7 @@ typedef unsigned int uint;
 //Struct provides pointer on dev, which was registered before, and two last timestamps, represented dev time.
 //They was read in interval TIMER_INTERVAL_SECS in terms of this module. Registered module must implement function getcurtime.
 struct ts_hint {
-	struct timespec frequency;
+	unsigned long long ns_interval;
 };
 
 struct ts_dev {
@@ -11,8 +11,12 @@ struct ts_dev {
 	struct timespec (*getcurtime)(void);
 	struct hrtimer hr_timer;
 	struct ts_hint hint;
+	
 	struct timespec ts1;
+	struct timespec sys_ts1;
+
 	struct timespec ts2;
+	struct timespec sys_ts2;
 };
 
 //This function registered devs will call for reduce their time to real time
